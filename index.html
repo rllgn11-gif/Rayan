@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>العقل الفارغ — إصدار ذكي</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">ع</div>
+      <div>
+        <div class="brand-title">العقل الفارغ</div>
+        <div class="brand-sub">ذكاء محلي • أساسيات • استدلال • فضول • محادثة • دراسة</div>
+      </div>
+    </div>
+    <div class="stats-strip">
+      <div class="stat"><b id="statWords">0</b>كلمات</div>
+      <div class="stat"><b id="statFacts">0</b>علاقات</div>
+      <div class="stat"><b id="statTri">0</b>ثلاثيات</div>
+      <div class="stat"><b id="statKernel">0</b>أساسيات</div>
+      <div class="stat"><b id="statInferences">0</b>استدلالات</div>
+      <div class="stat"><b id="statGaps">0</b>فجوات</div>
+      <div class="stat"><b id="statStudy">0</b>قيد الدراسة</div>
+      <div class="stat"><b id="statMastered">0</b>مُتقن</div>
+      <div class="stat error-stat"><b id="statErrors">0</b>أخطاء</div>
+    </div>
+    <div class="toolbar">
+      <button class="btn btn-sm btn-expert" id="expertToggle">🧠 خبير</button>
+      <button class="btn btn-sm" id="modeToggleBtn">🔁 <span id="modeLabel">دائم</span></button>
+      <button class="btn btn-sm" id="exportBtn">📥 تصدير العقل</button>
+      <label class="btn btn-sm" for="importFile">📤 دمج</label>
+      <input type="file" id="importFile" accept="application/json">
+      <button class="btn btn-sm" id="exportLogsBtn">📊 سجل الأخطاء</button>
+      <button class="btn btn-sm danger" id="resetBtn">🗑️ تصفير</button>
+    </div>
+  </div>
+
+  <div class="ledger">
+    <div class="page page-right-border">
+      <div class="page-header">
+        <span class="page-eyebrow">المرحلة الأولى</span>
+        <div class="page-title">لوحة التلقين</div>
+        <div class="page-desc">
+          <span class="badge-feature">ماضي/مضارع/أمر</span>
+          <span class="badge-feature">مرادفات</span>
+          <span class="badge-feature">جمل معقدة</span>
+          <span class="badge-feature" style="background:rgba(37,99,235,0.15);color:#2563eb;">🧠 أساسيات</span>
+        </div>
+      </div>
+      <textarea id="teachInput" placeholder="مثال: الفضاء يحتوي على مجرات. والمجرات تضم نجومًا."></textarea>
+      <div class="row">
+        <button class="btn-main" id="teachBtn" style="width:100%;">تلقين ↩</button>
+      </div>
+      <div class="graph-wrap">
+        <span class="graph-title">🧠 خريطة العقل</span>
+        <div id="brainGraph"></div>
+        <div class="graph-controls">
+          <button class="btn btn-sm" id="zoomInBtn">➕</button>
+          <button class="btn btn-sm" id="zoomOutBtn">➖</button>
+          <button class="btn btn-sm" id="resetViewBtn">⟲</button>
+        </div>
+      </div>
+      <div class="manual-edit-row">
+        <input id="manualSubj" placeholder="الموضوع">
+        <input id="manualRel" placeholder="العلاقة">
+        <input id="manualObj" placeholder="المفعول">
+        <select id="manualQuant" style="flex:0.4;min-width:50px;">
+          <option value="">بدون</option>
+          <option value="all">كل</option>
+          <option value="some">بعض</option>
+        </select>
+        <button class="btn btn-sm" id="manualAddBtn">➕</button>
+      </div>
+      <div class="feed" id="teachFeed"></div>
+    </div>
+    <div class="spine"></div>
+    <div class="page">
+      <div class="page-header">
+        <span class="page-eyebrow">المرحلة الثانية</span>
+        <div class="page-title">لوحة السؤال</div>
+        <div class="page-desc">
+          <span class="badge-feature">أسئلة مفتوحة</span>
+          <span class="badge-feature">استدلال عكسي</span>
+          <span class="badge-feature">سياق عميق</span>
+          <span class="badge-feature" style="background:rgba(37,99,235,0.15);color:#2563eb;">💬 محادثة</span>
+          <span class="badge-feature" style="background:rgba(245,158,11,0.15);color:#b45309;">🎭 تحليل مشاعر</span>
+          <span class="badge-feature" style="background:rgba(139,92,246,0.15);color:#7c3aed;">🧠 استدلال</span>
+          <span class="badge-feature" style="background:rgba(34,197,94,0.15);color:#16a34a;">📚 دراسة</span>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn-main" id="correctionBtn" style="background:#f59e0b;color:#1e293b;margin-right:8px;">✏️ صحح</button>
+        <button class="btn-main" id="curiosityBtn" style="background:#7c3aed;color:#fff;margin-right:8px;">🤔 فضول</button>
+        <button class="btn-main" id="inferenceBtn" style="background:#2563eb;color:#fff;margin-right:8px;">🧠 استدلال</button>
+        <button class="btn-main" id="webLearnBtn" style="background:#059669;color:#fff;margin-right:8px;">🌐 تعلم</button>
+        <input class="qinput" id="askInput" placeholder='مثال: ما الذي يحتوي على نجوم؟ / أخبرني عن الفضاء / السلام عليكم'>
+        <button class="btn-main" id="askBtn">اسأل</button>
+      </div>
+      <div class="feed" id="askFeed">
+        <div class="empty-state" id="askEmpty">
+          <div class="glyph">؟</div>
+          <div>لم تسأل شيئاً بعد.</div>
+        </div>
+      </div>
+
+      <!-- ===== قسم الدراسة الجديد ===== -->
+      <div style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-family:var(--serif);font-size:18px;">📚 الدراسة والإتقان</span>
+          <span style="font-size:10px;color:var(--parchment-dim);">(تحميل نصوص للدراسة)</span>
+        </div>
+        
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+          <input id="studyTitleInput" placeholder="عنوان النص" style="flex:1;min-width:80px;background:var(--ink-soft);border:1px solid var(--line);color:var(--parchment);padding:4px 8px;border-radius:4px;font-family:var(--sans);font-size:12px;">
+          <button class="btn-main" id="loadStudyBtn" style="padding:4px 12px;font-size:12px;">📚 تحميل للدراسة</button>
+        </div>
+        
+        <textarea id="studyTextInput" placeholder="الصق النص (كتاب، مقال، محاضرة) هنا..." style="width:100%;background:var(--ink-soft);border:1px solid var(--line);color:var(--parchment);border-radius:4px;padding:6px 8px;font-family:var(--sans);font-size:13px;line-height:1.6;resize:vertical;min-height:80px;"></textarea>
+        
+        <div id="studySessionContainer"></div>
+        <div class="feed" id="studyFeed" style="max-height:200px;margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ترتيب التحميل -->
+  <script src="js/config.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/brain.js"></script>
+  <script src="js/learn.js"></script>
+  <script src="js/parser.js"></script>
+  <script src="js/sentiment.js"></script>
+  <script src="js/learn_style.js"></script>
+  <script src="js/web_learner.js"></script>
+  <script src="js/inference.js"></script>
+  <script src="js/study.js"></script>
+  <script src="js/query.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/graph.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
