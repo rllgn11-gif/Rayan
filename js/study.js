@@ -4,7 +4,7 @@
 // ================================================================
 
 // ===== تكوين الخادم (تم التحديث برابط Render) =====
-const SERVER_URL = 'https://rayan-rrbi.onrender.com/'; // ✅ تم التحديث
+const SERVER_URL = 'https://rayan-rrbi.onrender.com'; // ✅ تم التحديث
 
 // ===== تهيئة بيانات الدراسة =====
 if (!window.brain.study) {
