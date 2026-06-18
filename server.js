@@ -1,3 +1,8 @@
+// ================================================================
+// الملف: server.js
+// خادم العقل الفارغ - مع مسارين للبحث
+// ================================================================
+
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
@@ -22,6 +27,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       search_wiki: '/api/search-wiki?q=الكلمة',
+      search: '/api/search?q=الكلمة',  // مسار بديل
       fetch_page: '/api/fetch-page (POST)',
       scrape: '/api/scrape (POST)',
       teach: '/api/teach (POST)'
@@ -30,7 +36,7 @@ app.get('/', (req, res) => {
 });
 
 // ================================================================
-// البحث في ويكيبيديا (المسار المطلوب)
+// المسار 1: البحث في ويكيبيديا (api/search-wiki)
 // ================================================================
 app.get('/api/search-wiki', async (req, res) => {
   try {
@@ -69,6 +75,64 @@ app.get('/api/search-wiki', async (req, res) => {
     return res.json({ found: false, error: 'لم أجد نتيجة' });
   } catch (error) {
     console.error('خطأ في البحث:', error.message);
+    res.status(500).json({ error: 'فشل البحث', details: error.message });
+  }
+});
+
+// ================================================================
+// المسار 2: البحث البديل (api/search) - يحاول ويكيبيديا ثم ويكيبيديا الإنجليزية
+// ================================================================
+app.get('/api/search', async (req, res) => {
+  try {
+    const query = req.query.q;
+    if (!query) {
+      return res.status(400).json({ error: 'معامل البحث q مطلوب' });
+    }
+
+    const keywords = query
+      .replace(/[؟؟!.,"']/g, '')
+      .replace(/^(ما هو|ما هي|ماذا|من هو|من هي|أين|كيف|لماذا)\s*/i, '')
+      .trim();
+
+    if (!keywords || keywords.length < 2) {
+      return res.json({ found: false, error: 'الكلمات المفتاحية قصيرة جداً' });
+    }
+
+    // 1. ويكيبيديا العربية
+    try {
+      const arUrl = `https://ar.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`;
+      const arResponse = await axios.get(arUrl, { timeout: 5000 });
+      if (arResponse.data && arResponse.data.extract) {
+        const sentences = arResponse.data.extract.split(/[.!?;]/).filter(s => s.trim().length > 10);
+        const answer = sentences.length > 0 ? sentences[0].trim() : arResponse.data.extract.substring(0, 300);
+        return res.json({
+          found: true,
+          answer: answer,
+          title: arResponse.data.title || keywords,
+          source: 'wikipedia_ar'
+        });
+      }
+    } catch (e) {}
+
+    // 2. ويكيبيديا الإنجليزية
+    try {
+      const enUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`;
+      const enResponse = await axios.get(enUrl, { timeout: 5000 });
+      if (enResponse.data && enResponse.data.extract) {
+        const sentences = enResponse.data.extract.split(/[.!?;]/).filter(s => s.trim().length > 10);
+        const answer = sentences.length > 0 ? sentences[0].trim() : enResponse.data.extract.substring(0, 300);
+        return res.json({
+          found: true,
+          answer: `(مترجم) ${answer}`,
+          title: enResponse.data.title || keywords,
+          source: 'wikipedia_en'
+        });
+      }
+    } catch (e) {}
+
+    return res.json({ found: false, error: 'لم أجد نتيجة' });
+  } catch (error) {
+    console.error('خطأ في البحث البديل:', error.message);
     res.status(500).json({ error: 'فشل البحث', details: error.message });
   }
 });
@@ -164,6 +228,7 @@ app.listen(PORT, () => {
   console.log('📊 نقاط النهاية المتاحة:');
   console.log('   GET  /health          - التحقق من الصحة');
   console.log('   GET  /api/search-wiki - البحث في ويكيبيديا');
+  console.log('   GET  /api/search      - البحث البديل');
   console.log('   POST /api/fetch-page  - جلب صفحة وحل CORS');
   console.log('   POST /api/scrape      - زحف إلى صفحة');
   console.log('   POST /api/teach       - تلقين معلومة');
