@@ -3,8 +3,8 @@
 // طبقة الدراسة والإتقان - مع ربط خادم البحث
 // ================================================================
 
-// ===== تكوين الخادم =====
-const SERVER_URL = 'https://your-server.onrender.com'; // ⚠️ استبدل برابط خادمك
+// ===== تكوين الخادم (تم التحديث برابط Render) =====
+const SERVER_URL = 'https://rayan.onrender.com'; // ✅ تم التحديث
 
 // ===== تهيئة بيانات الدراسة =====
 if (!window.brain.study) {
@@ -19,7 +19,9 @@ let currentQuestionIndex = 0;
 let correctAnswers = 0;
 let totalQuestions = 0;
 
-// ===== 1. تحميل نص للدراسة =====
+// ================================================================
+// 1. تحميل نص للدراسة
+// ================================================================
 function loadTextForStudy(title, rawText) {
   if (!title || !rawText) {
     if (typeof UIAPI !== 'undefined' && UIAPI.showToast) {
@@ -54,7 +56,9 @@ function loadTextForStudy(title, rawText) {
   return entry;
 }
 
-// ===== 2. استخراج الحقائق من النص =====
+// ================================================================
+// 2. استخراج الحقائق من النص
+// ================================================================
 function extractFactsFromText(text) {
   const facts = [];
   const sentences = text.split(/[.!?،؛\n\r]+/).filter(s => s.trim().length > 10);
@@ -93,7 +97,9 @@ function extractFactsFromText(text) {
   return facts;
 }
 
-// ===== 3. توليد أسئلة من الحقائق =====
+// ================================================================
+// 3. توليد أسئلة من الحقائق
+// ================================================================
 function generateQuestionsFromFacts(facts) {
   const questions = [];
   for (const fact of facts) {
@@ -118,9 +124,12 @@ function generateQuestionsFromFacts(facts) {
   return questions;
 }
 
-// ===== 4. البحث عن إجابة عبر الخادم =====
+// ================================================================
+// 4. البحث عن إجابة عبر الخادم (مع حل احتياطي)
+// ================================================================
 async function searchAnswerOnline(question) {
   try {
+    // استخراج الكلمات المفتاحية
     const keywords = question
       .replace(/[؟؟!.,"']/g, '')
       .replace(/^(ما هو|ما هي|ماذا|من هو|من هي|أين|كيف|لماذا)\s*/i, '')
@@ -130,9 +139,15 @@ async function searchAnswerOnline(question) {
       return { found: false, error: 'الكلمات المفتاحية قصيرة جداً' };
     }
 
-    // 1. محاولة الاتصال بالخادم المساعد
+    // ===== 1. محاولة الاتصال بالخادم =====
     try {
-      const response = await fetch(`${SERVER_URL}/api/search-wiki?q=${encodeURIComponent(keywords)}`);
+      const url = `${SERVER_URL}/api/search-wiki?q=${encodeURIComponent(keywords)}`;
+      console.log('🔍 جاري البحث في الخادم:', url);
+      
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(10000) // مهلة 10 ثوان
+      });
+      
       if (response.ok) {
         const data = await response.json();
         if (data && data.found) {
@@ -145,24 +160,31 @@ async function searchAnswerOnline(question) {
         }
       }
     } catch (e) {
-      console.log('⚠️ فشل الاتصال بالخادم، جاري استخدام الحل الاحتياطي...');
+      console.log('⚠️ فشل الاتصال بالخادم، جاري استخدام الحل الاحتياطي...', e.message);
     }
 
-    // 2. حل احتياطي: الاتصال مباشرة بويكيبيديا
-    const wikiUrl = `https://ar.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`;
-    const wikiResponse = await fetch(wikiUrl);
-    if (wikiResponse.ok) {
-      const wikiData = await wikiResponse.json();
-      if (wikiData && wikiData.extract) {
-        const sentences = wikiData.extract.split(/[.!?;]/).filter(s => s.trim().length > 10);
-        const answer = sentences.length > 0 ? sentences[0].trim() : wikiData.extract.substring(0, 200);
-        return { 
-          found: true, 
-          answer: answer, 
-          source: 'wikipedia_direct',
-          title: wikiData.title || keywords
-        };
+    // ===== 2. حل احتياطي: الاتصال مباشرة بويكيبيديا =====
+    try {
+      const wikiUrl = `https://ar.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`;
+      const wikiResponse = await fetch(wikiUrl, {
+        signal: AbortSignal.timeout(8000)
+      });
+      
+      if (wikiResponse.ok) {
+        const wikiData = await wikiResponse.json();
+        if (wikiData && wikiData.extract) {
+          const sentences = wikiData.extract.split(/[.!?;]/).filter(s => s.trim().length > 10);
+          const answer = sentences.length > 0 ? sentences[0].trim() : wikiData.extract.substring(0, 200);
+          return { 
+            found: true, 
+            answer: answer, 
+            source: 'wikipedia_direct',
+            title: wikiData.title || keywords
+          };
+        }
       }
+    } catch (e) {
+      console.log('⚠️ فشل الاتصال بويكيبيديا مباشرة:', e.message);
     }
 
     return { found: false, error: 'لم أجد إجابة' };
@@ -172,7 +194,9 @@ async function searchAnswerOnline(question) {
   }
 }
 
-// ===== 5. الإجابة التلقائية على السؤال =====
+// ================================================================
+// 5. الإجابة التلقائية على السؤال
+// ================================================================
 async function autoAnswerCurrentQuestion() {
   const entry = window.brain.study.workbench.find(e => e.id === currentStudySession);
   if (!entry) {
@@ -229,13 +253,16 @@ async function autoAnswerCurrentQuestion() {
     feedback.innerHTML = `❌ لم أجد إجابة: ${result.error || 'غير معروف'}`;
     feedback.style.color = '#ef4444';
     
+    // عرض زر للمساعدة اليدوية
     setTimeout(() => {
       feedback.innerHTML += `<br><button class="btn btn-sm" onclick="skipQuestion()" style="margin-top:4px;">⏭️ تخطي</button>`;
     }, 500);
   }
 }
 
-// ===== 6. بدء جلسة دراسة =====
+// ================================================================
+// 6. بدء جلسة دراسة
+// ================================================================
 function startStudySession(studyId) {
   const entry = window.brain.study.workbench.find(e => e.id === studyId);
   if (!entry) {
@@ -263,7 +290,9 @@ function startStudySession(studyId) {
   renderStudySession();
 }
 
-// ===== 7. عرض جلسة الدراسة =====
+// ================================================================
+// 7. عرض جلسة الدراسة
+// ================================================================
 function renderStudySession() {
   const entry = window.brain.study.workbench.find(e => e.id === currentStudySession);
   if (!entry) return;
@@ -321,7 +350,9 @@ function renderStudySession() {
   document.getElementById('studyAnswerInput').focus();
 }
 
-// ===== 8. تقديم إجابة =====
+// ================================================================
+// 8. تقديم إجابة
+// ================================================================
 function submitAnswer(userAnswer) {
   const entry = window.brain.study.workbench.find(e => e.id === currentStudySession);
   if (!entry) return;
@@ -378,7 +409,9 @@ function submitAnswer(userAnswer) {
   }, 1500);
 }
 
-// ===== 9. تخطي سؤال =====
+// ================================================================
+// 9. تخطي سؤال
+// ================================================================
 function skipQuestion() {
   const entry = window.brain.study.workbench.find(e => e.id === currentStudySession);
   if (!entry) return;
@@ -396,7 +429,9 @@ function skipQuestion() {
   }, 1000);
 }
 
-// ===== 10. إنهاء جلسة الدراسة =====
+// ================================================================
+// 10. إنهاء جلسة الدراسة
+// ================================================================
 function endStudySession() {
   const entry = window.brain.study.workbench.find(e => e.id === currentStudySession);
   if (!entry) return;
@@ -434,7 +469,9 @@ function endStudySession() {
   }
 }
 
-// ===== 11. نقل إلى المُتقنات =====
+// ================================================================
+// 11. نقل إلى المُتقنات
+// ================================================================
 function moveToMastered(studyId) {
   const index = window.brain.study.workbench.findIndex(e => e.id === studyId);
   if (index === -1) return;
@@ -459,7 +496,9 @@ function moveToMastered(studyId) {
   renderStudyFeed();
 }
 
-// ===== 12. عرض حالة الدراسة =====
+// ================================================================
+// 12. عرض حالة الدراسة
+// ================================================================
 function renderStudyFeed() {
   const container = document.getElementById('studyFeed');
   if (!container) return;
@@ -514,7 +553,9 @@ function renderStudyFeed() {
   container.innerHTML = html;
 }
 
-// ===== 13. حذف نص من الدراسة =====
+// ================================================================
+// 13. حذف نص من الدراسة
+// ================================================================
 function removeStudyText(studyId) {
   if (!confirm('⚠️ هل أنت متأكد من حذف هذا النص من الدراسة؟')) return;
   
@@ -528,7 +569,9 @@ function removeStudyText(studyId) {
   }
 }
 
-// ===== 14. تحميل النص من المدخل =====
+// ================================================================
+// 14. تحميل النص من المدخل
+// ================================================================
 function loadTextFromInput() {
   const titleInput = document.getElementById('studyTitleInput');
   const textInput = document.getElementById('studyTextInput');
@@ -548,7 +591,9 @@ function loadTextFromInput() {
   textInput.value = '';
 }
 
-// ===== تصدير دوال إلى النطاق العام =====
+// ================================================================
+// 15. تصدير الدوال إلى النطاق العام
+// ================================================================
 window.loadTextForStudy = loadTextForStudy;
 window.extractFactsFromText = extractFactsFromText;
 window.generateQuestionsFromFacts = generateQuestionsFromFacts;
@@ -564,3 +609,6 @@ window.loadTextFromInput = loadTextFromInput;
 window.searchAnswerOnline = searchAnswerOnline;
 window.autoAnswerCurrentQuestion = autoAnswerCurrentQuestion;
 window.SERVER_URL = SERVER_URL;
+
+console.log('✅ study.js loaded successfully');
+console.log(`🌐 Server URL: ${SERVER_URL}`);
