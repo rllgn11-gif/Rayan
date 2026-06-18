@@ -1,10 +1,9 @@
 // ================================================================
 // الملف: study.js
-// طبقة الدراسة والإتقان - مع ربط خادم البحث
+// طبقة الدراسة والإتقان - مع تجربة عدة مسارات للبحث
 // ================================================================
 
-// ===== تكوين الخادم (تم التحديث برابط Render) =====
-const SERVER_URL = 'https://rayan-rrbi.onrender.com'; // ✅ تم التحديث
+const SERVER_URL = 'https://rayan-rrbi.onrender.com';
 
 // ===== تهيئة بيانات الدراسة =====
 if (!window.brain.study) {
@@ -125,11 +124,10 @@ function generateQuestionsFromFacts(facts) {
 }
 
 // ================================================================
-// 4. البحث عن إجابة عبر الخادم (مع حل احتياطي)
+// 4. البحث عن إجابة عبر الخادم (مع تجربة عدة مسارات)
 // ================================================================
 async function searchAnswerOnline(question) {
   try {
-    // استخراج الكلمات المفتاحية
     const keywords = question
       .replace(/[؟؟!.,"']/g, '')
       .replace(/^(ما هو|ما هي|ماذا|من هو|من هي|أين|كيف|لماذا)\s*/i, '')
@@ -139,33 +137,45 @@ async function searchAnswerOnline(question) {
       return { found: false, error: 'الكلمات المفتاحية قصيرة جداً' };
     }
 
-    // ===== 1. محاولة الاتصال بالخادم =====
-    try {
-      const url = `${SERVER_URL}/api/search-wiki?q=${encodeURIComponent(keywords)}`;
-      console.log('🔍 جاري البحث في الخادم:', url);
-      
-      const response = await fetch(url, {
-        signal: AbortSignal.timeout(10000) // مهلة 10 ثوان
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.found) {
-          return { 
-            found: true, 
-            answer: data.answer, 
-            source: data.source || 'server',
-            title: data.title || keywords
-          };
+    // ===== قائمة المسارات المحتملة =====
+    const paths = [
+      `/api/search-wiki?q=${encodeURIComponent(keywords)}`,
+      `/api/search?q=${encodeURIComponent(keywords)}`,
+      `/search-wiki?q=${encodeURIComponent(keywords)}`,
+      `/wiki?q=${encodeURIComponent(keywords)}`
+    ];
+
+    // ===== 1. محاولة الاتصال بالخادم عبر المسارات المختلفة =====
+    for (const path of paths) {
+      try {
+        const url = `${SERVER_URL}${path}`;
+        console.log(`🔍 محاولة المسار: ${url}`);
+        
+        const response = await fetch(url, {
+          signal: AbortSignal.timeout(8000)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.found) {
+            return { 
+              found: true, 
+              answer: data.answer, 
+              source: data.source || 'server',
+              title: data.title || keywords
+            };
+          }
         }
+      } catch (e) {
+        console.log(`⚠️ فشل المسار ${path}:`, e.message);
       }
-    } catch (e) {
-      console.log('⚠️ فشل الاتصال بالخادم، جاري استخدام الحل الاحتياطي...', e.message);
     }
 
     // ===== 2. حل احتياطي: الاتصال مباشرة بويكيبيديا =====
     try {
       const wikiUrl = `https://ar.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(keywords)}`;
+      console.log(`🔍 حل احتياطي: ${wikiUrl}`);
+      
       const wikiResponse = await fetch(wikiUrl, {
         signal: AbortSignal.timeout(8000)
       });
@@ -187,7 +197,7 @@ async function searchAnswerOnline(question) {
       console.log('⚠️ فشل الاتصال بويكيبيديا مباشرة:', e.message);
     }
 
-    return { found: false, error: 'لم أجد إجابة' };
+    return { found: false, error: 'لم أجد إجابة بعد المحاولات المتعددة' };
   } catch (e) {
     console.error('خطأ في البحث:', e);
     return { found: false, error: e.message };
@@ -253,7 +263,6 @@ async function autoAnswerCurrentQuestion() {
     feedback.innerHTML = `❌ لم أجد إجابة: ${result.error || 'غير معروف'}`;
     feedback.style.color = '#ef4444';
     
-    // عرض زر للمساعدة اليدوية
     setTimeout(() => {
       feedback.innerHTML += `<br><button class="btn btn-sm" onclick="skipQuestion()" style="margin-top:4px;">⏭️ تخطي</button>`;
     }, 500);
@@ -611,4 +620,4 @@ window.autoAnswerCurrentQuestion = autoAnswerCurrentQuestion;
 window.SERVER_URL = SERVER_URL;
 
 console.log('✅ study.js loaded successfully');
-console.log(`🌐 Server URL: ${SERVER_URL}`);
+console.log(`🌐 Server URL: ${SERVER_URL}`); 
